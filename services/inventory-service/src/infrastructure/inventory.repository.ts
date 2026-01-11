@@ -11,4 +11,16 @@ export class InventoryRepository {
   async save(asset: Asset): Promise<Asset> {
     return await this.repository.save(asset);
   }
+  
+async update(id: number, data: Partial<Asset>): Promise<void> {
+  await this.repository.update(id, data);
+}
+
+async delete(id: number): Promise<void> {
+  await this.repository.delete(id);
+}
+
+async findOne(id: number): Promise<Asset | null> {
+  return await this.repository.findOneBy({ id });
+}
 }
