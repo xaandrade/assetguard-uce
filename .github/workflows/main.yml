@@ -17,7 +17,7 @@ jobs:
         with:
           node-version: '18'
 
-      # Corregimos la ruta: Entramos directo a inventory-service
+
       - name: Install & Test Inventory Service
         run: |
           # Intentamos entrar a la ruta que se ve en tu GitHub
@@ -28,7 +28,7 @@ jobs:
           fi
           npm install
           npm test
-          
+
   terraform-check:
     runs-on: ubuntu-latest
     steps:
