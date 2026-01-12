@@ -20,10 +20,15 @@ jobs:
       # Corregimos la ruta: Entramos directo a inventory-service
       - name: Install & Test Inventory Service
         run: |
-          cd inventory-service
+          # Intentamos entrar a la ruta que se ve en tu GitHub
+          if [ -d "services/inventory-service" ]; then
+            cd services/inventory-service
+          elif [ -d "inventory-service" ]; then
+            cd inventory-service
+          fi
           npm install
           npm test
-
+          
   terraform-check:
     runs-on: ubuntu-latest
     steps:
