@@ -71,9 +71,14 @@ app.post('/assets', async (req: any, res: any) => {
   }
 });
 
-app.get('/assets', async (req: any, res: any) => {
-  const [rows] = await pool.execute('SELECT * FROM assets');
-  res.json(rows);
+// Ahora responderá a http://localhost:3002/ que es lo que envía el Gateway
+app.get('/', async (req: any, res: any) => {
+  try {
+    const [rows] = await pool.execute('SELECT * FROM assets');
+    res.json(rows);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.listen(3002, () => console.log('📦 Inventory Service en puerto 3002'));
