@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  # 1. Relacional (MySQL) - YA LO TIENES
+  mysql-db:
+    image: mysql:8.0
+    container_name: assetguard-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: inventory_db
+    ports:
+      - "3306:3306"
+
+  # 2. NoSQL (MongoDB) - YA LO TIENES
+  mongo-db:
+    image: mongo:latest
+    container_name: assetguard-mongo
+    ports:
+      - "27017:27017"
+
+  # 3. Caché (Redis) - YA LO TIENES
+  redis-cache:
+    image: redis:alpine
+    container_name: assetguard-redis
+    ports:
+      - "6379:6379"
+
+
+  zookeeper:
+    image: wurstmeister/zookeeper
+    container_name: assetguard-zookeeper
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: wurstmeister/kafka
+    container_name: assetguard-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ADVERTISED_HOST_NAME: localhost
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    depends_on:
+      - zookeeper

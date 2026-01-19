@@ -1,0 +1,20 @@
+{
+  "name": "assetguard-uce",
+  "private": true,
+  "description": "Monorepo AssetGuard UCE",
+  "workspaces": [
+    "services/*",
+    "gateway/api-gateway", 
+    "shared",
+    "apps/*"
+  ],
+  "scripts": {
+    "start:all": "concurrently -n \"GATEWAY,SECURITY,INVENTORY,AUDIT,DEPRE,TRACK,PURCH,FIXED,NOTIF,REPORT,USER\" -c \"cyan,magenta,blue,green,yellow,white,red,blueBright,magentaBright,cyanBright,greenBright\" \"npm run dev --workspace=@assetguard/api-gateway\" \"npm run dev --workspace=@assetguard/security-service\" \"npm run dev --workspace=@assetguard/inventory-service\" \"npm run dev --workspace=@assetguard/audit-service\" \"npm run dev --workspace=@assetguard/depreciation-service\" \"npm run dev --workspace=@assetguard/tracking-service\" \"npm run dev --workspace=@assetguard/purchasing-service\" \"npm run dev --workspace=@assetguard/fixed-assets-service\" \"npm run dev --workspace=@assetguard/notification-service\" \"npm run dev --workspace=@assetguard/reporting-service\" \"npm run dev --workspace=@assetguard/user-service\"",
+    "dev": "npm run start:all",
+    "build": "turbo run build"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "turbo": "^2.7.5"
+  }
+}
