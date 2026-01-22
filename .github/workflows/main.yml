@@ -47,4 +47,4 @@ jobs:
           else 
             echo "Carpeta terraform no encontrada, saltando validación técnica."
           fi
-        continue-on-error: true # Esto evita que la X roja bloquee el proyecto
+        continue-on-error: true 

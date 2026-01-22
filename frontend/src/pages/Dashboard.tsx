@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { Package, ShieldCheck, Database, LayoutDashboard, Loader2 } from 'lucide-react';
-import api from '../services/api'; // Asegúrate de haber creado este archivo
+import { useEffect, useState } from 'react';
+import { ShieldCheck, Database, LayoutDashboard, Loader2, Clock } from 'lucide-react';
+import api from '../services/api';
 
-// Definimos la interfaz para que TypeScript nos ayude
+
 interface Asset {
   id: string;
   name: string;
@@ -11,29 +11,45 @@ interface Asset {
   value: string | number;
 }
 
+interface AuditLog {
+  _id: string;
+  event: string;
+  userId: string;
+  details: any;
+  timestamp: string;
+}
+
 export default function Dashboard() {
+  const [activeTab, setActiveTab] = useState<'inventory' | 'audit'>('inventory');
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchAssets = async () => {
-      try {
-        setLoading(true);
-        // Llamada a tu API Gateway (Puerto 3000)
-        // El Gateway redirige al Inventory Service
+  
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      if (activeTab === 'inventory') {
         const response = await api.get('/inventory');
         setAssets(response.data);
-      } catch (err) {
-        console.error("Error fetching assets:", err);
-        setError("No se pudo conectar con los microservicios.");
-      } finally {
-        setLoading(false);
+      } else {
+        const response = await api.get('/audit');
+        setAuditLogs(response.data);
       }
-    };
+    } catch (err) {
+      console.error("Error fetching data:", err);
+      setError("Error de conexión con los microservicios.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchAssets();
-  }, []);
+  useEffect(() => {
+    fetchData();
+  }, [activeTab]);
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
@@ -43,15 +59,19 @@ export default function Dashboard() {
           <ShieldCheck className="text-blue-400" /> AssetGuard
         </h1>
         <nav className="space-y-4">
-          <div className="flex items-center gap-3 text-blue-400 font-medium">
-            <LayoutDashboard size={20}/> Dashboard
-          </div>
-          <div className="flex items-center gap-3 text-gray-400 hover:text-white cursor-pointer transition-colors">
-            <Package size={20}/> Inventario
-          </div>
-          <div className="flex items-center gap-3 text-gray-400 hover:text-white cursor-pointer transition-colors">
+          <button 
+            onClick={() => setActiveTab('inventory')}
+            className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${activeTab === 'inventory' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-slate-800'}`}
+          >
+            <LayoutDashboard size={20}/> Inventario
+          </button>
+          
+          <button 
+            onClick={() => setActiveTab('audit')}
+            className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${activeTab === 'audit' ? 'bg-green-600 text-white' : 'text-gray-400 hover:bg-slate-800'}`}
+          >
             <Database size={20}/> Auditoría (Mongo)
-          </div>
+          </button>
         </nav>
       </div>
 
@@ -59,13 +79,13 @@ export default function Dashboard() {
       <div className="flex-1 p-8">
         <header className="flex justify-between items-center mb-8">
           <div>
-            <h2 className="text-2xl font-semibold text-gray-800">Panel de Control de Activos</h2>
-            <p className="text-gray-500 text-sm">Visualización en tiempo real de microservicios</p>
+            <h2 className="text-2xl font-semibold text-gray-800">
+              {activeTab === 'inventory' ? 'Gestión de Activos (AWS RDS)' : 'Historial de Auditoría (MongoDB Atlas)'}
+            </h2>
+            <p className="text-gray-500 text-sm">Arquitectura Hexagonal - Microservicios UCE</p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className={`px-4 py-1 rounded-full text-sm font-medium ${error ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-              {error ? 'Sistema Offline' : 'Sistema Online (AWS RDS)'}
-            </div>
+          <div className={`px-4 py-1 rounded-full text-sm font-medium ${error ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+            {error ? 'Servicios Offline' : 'Servicios Online'}
           </div>
         </header>
 
@@ -73,53 +93,75 @@ export default function Dashboard() {
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
               <Loader2 className="animate-spin text-blue-500" size={40} />
-              <p className="text-gray-500 italic">Conectando con Gateway...</p>
+              <p className="text-gray-500 italic">Sincronizando con Gateway...</p>
             </div>
           ) : error ? (
             <div className="p-12 text-center">
               <p className="text-red-500 font-medium">{error}</p>
-              <button 
-                onClick={() => window.location.reload()}
-                className="mt-4 text-blue-600 hover:underline text-sm"
-              >
-                Reintentar conexión
-              </button>
+              <button onClick={fetchData} className="mt-4 text-blue-600 hover:underline text-sm">Reintentar</button>
             </div>
-          ) : (
+          ) : activeTab === 'inventory' ? (
+            
             <table className="w-full text-left">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">ID</th>
-                  <th className="px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">Activo</th>
-                  <th className="px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">Categoría</th>
-                  <th className="px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">Estado</th>
-                  <th className="px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">Valor</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">ID</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Activo</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Categoría</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Estado</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Valor</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {assets.length > 0 ? (
-                  assets.map((asset) => (
-                    <tr key={asset.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 text-sm text-gray-500 font-mono">#{asset.id}</td>
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900">{asset.name}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{asset.category}</td>
+                {assets.map((asset) => (
+                  <tr key={asset.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm font-mono">#{asset.id}</td>
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{asset.name}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">{asset.category}</td>
+                    <td className="px-6 py-4">
+                      <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                        {asset.status || 'Activo'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm font-bold">${Number(asset.value).toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            
+            <table className="w-full text-left">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Fecha</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Evento</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Usuario</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Detalles</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {auditLogs.length > 0 ? (
+                  auditLogs.map((log) => (
+                    <tr key={log._id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        <div className="flex items-center gap-2">
+                          <Clock size={14} /> {new Date(log.timestamp).toLocaleString()}
+                        </div>
+                      </td>
                       <td className="px-6 py-4">
-                        <span className={`px-2.5 py-0.5 text-xs font-semibold rounded-full ${
-                          asset.status === 'Activo' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {asset.status}
+                        <span className="px-2 py-1 text-xs font-bold rounded bg-blue-100 text-blue-700">
+                          {log.event}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 font-bold">
-                        {typeof asset.value === 'number' ? `$${asset.value.toLocaleString()}` : asset.value}
+                      <td className="px-6 py-4 text-sm font-medium text-gray-700">{log.userId}</td>
+                      <td className="px-6 py-4 text-xs text-gray-500 font-mono">
+                        {JSON.stringify(log.details).substring(0, 50)}...
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="px-6 py-10 text-center text-gray-400 italic">
-                      No se encontraron activos en la base de datos.
-                    </td>
+                    <td colSpan={4} className="px-6 py-10 text-center text-gray-400">No hay registros de auditoría en MongoDB Atlas.</td>
                   </tr>
                 )}
               </tbody>
