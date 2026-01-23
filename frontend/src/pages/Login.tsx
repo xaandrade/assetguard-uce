@@ -14,17 +14,17 @@ export default function Login() {
     setError(null);
 
     try {
-      // Llamada al Gateway -> /api/auth/login
+      
       const response = await api.post('/auth/login', {
         email: email,
         password: password
       });
 
-      // Guardamos el JWT real
+      
       const { token } = response.data;
       localStorage.setItem('token', token);
       
-      // Redirigimos al Dashboard
+      
       window.location.href = '/dashboard';
       
     } catch (err: any) {

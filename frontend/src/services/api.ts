@@ -1,26 +1,17 @@
 import axios from 'axios';
 
-/**
- * Configuración centralizada de Axios para AssetGuard.
- * El puerto 3000 apunta a tu API Gateway.
- */
+
 const api = axios.create({
-  baseURL: 'http://localhost:3000/api',
+  baseURL: 'http://3.232.13.205/api', 
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-/**
- * INTERCEPTOR DE PETICIONES
- * Este código se ejecuta ANTES de que cada petición salga hacia el Gateway.
- * Si existe un token en el localStorage, lo adjunta en los Headers.
- */
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
-      // Usamos el formato estándar Bearer Token para JWT
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
@@ -30,18 +21,21 @@ api.interceptors.request.use(
   }
 );
 
-/**
- * INTERCEPTOR DE RESPUESTAS (Opcional pero recomendado)
- * Si el Gateway devuelve un 401 (Token expirado), podemos redirigir al login.
- */
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
-      console.warn("Sesión expirada o token faltante. Redirigiendo...");
+    
+    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+      console.warn("🔐 Sesión inválida o expirada. Limpiando datos...");
+      
+      
       localStorage.removeItem('token');
-      // Descomenta la siguiente línea si quieres forzar el logout
-      // window.location.href = '/login';
+      
+      
+      if (window.location.pathname !== '/') {
+        window.location.href = '/';
+      }
     }
     return Promise.reject(error);
   }

@@ -6,10 +6,11 @@ import { ClientRequest, IncomingMessage, ServerResponse } from 'http';
 
 const app = express();
 const PORT = 3000;
-const SECRET_KEY = 'UCE_SECRET_2026';
+
+// --- DEBE SER IGUAL AL SECURITY SERVICE ---
+const SECRET_KEY = 'uce_secret_key'; 
 
 app.use(cors());
-// IMPORTANTE: No usar express.json() aquí para no romper los proxies de peticiones POST
 
 const services = {
   security: 'http://localhost:3001',
@@ -24,67 +25,75 @@ const services = {
   user: 'http://localhost:3010',
 };
 
-// --- MIDDLEWARE DE AUTENTICACIÓN ---
+// Middleware de Autenticación
 const authenticateToken = (req: any, res: any, next: any) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
+    console.log(`[GATEWAY] ⚠️ Token faltante en: ${req.url}`);
     return res.status(401).json({ message: 'Acceso denegado: Token faltante' });
   }
 
   jwt.verify(token, SECRET_KEY, (err: any, user: any) => {
-    if (err) return res.status(403).json({ message: 'Token inválido o expirado' });
+    if (err) {
+      console.log(`[GATEWAY] ❌ Token inválido en: ${req.url}`);
+      return res.status(403).json({ message: 'Token inválido o expirado' });
+    }
     req.user = user;
     next();
   });
 };
 
-// --- CONFIGURACIÓN DE PROXIES ---
+const logProxyReq = (proxyReq: ClientRequest, req: IncomingMessage, res: ServerResponse) => {
+  console.log(`[GATEWAY] -> Redirigiendo ${req.method} ${req.url}`);
+};
 
-// 1. Security (Público)
+// 1. Auth (Público)
 app.use('/api/auth', createProxyMiddleware({ 
   target: services.security, 
   changeOrigin: true,
   pathRewrite: { '^/api/auth': '' },
-  onProxyReq: (proxyReq: ClientRequest, req: IncomingMessage, res: ServerResponse) => {
-    console.log(`[GATEWAY] -> Security: ${req.url}`);
-  }
+  onProxyReq: logProxyReq
 } as Options));
 
-// 2. Inventory (Protegido)
+// 2. Inventario (Protegido)
 app.use('/api/inventory', authenticateToken, createProxyMiddleware({ 
   target: services.inventory, 
   changeOrigin: true,
-  pathRewrite: { '^/api/inventory': '' } 
+  pathRewrite: { '^/api/inventory': '' },
+  onProxyReq: logProxyReq
 } as Options));
 
-// 3. Audit (Protegido)
+// 3. Auditoría (Protegido) - AJUSTADO PARA /logs
 app.use('/api/audit', authenticateToken, createProxyMiddleware({ 
   target: services.audit, 
   changeOrigin: true,
-  pathRewrite: { '^/api/audit': '' } 
+  pathRewrite: { '^/api/audit': '/logs' }, // <--- ESTO ES LO IMPORTANTE
+  onProxyReq: logProxyReq
 } as Options));
 
-// 4. Reporting (Protegido)
-app.use('/api/reporting', authenticateToken, createProxyMiddleware({ 
-  target: services.reporting, 
-  changeOrigin: true,
-  pathRewrite: { '^/api/reporting': '' } 
-} as Options));
+// 4. Otros Servicios
+const genericServices = [
+  { path: '/api/fixed-assets', target: services.fixed_assets },
+  { path: '/api/tracking', target: services.tracking },
+  { path: '/api/users', target: services.user },
+  { path: '/api/notifications', target: services.notification },
+  { path: '/api/depreciation', target: services.depreciation },
+  { path: '/api/purchasing', target: services.purchasing },
+  { path: '/api/reporting', target: services.reporting },
+];
 
-// 5. Otros Servicios (Protegidos)
-app.use('/api/fixed-assets', authenticateToken, createProxyMiddleware({ target: services.fixed_assets, changeOrigin: true, pathRewrite: { '^/api/fixed-assets': '' } } as Options));
-app.use('/api/tracking', authenticateToken, createProxyMiddleware({ target: services.tracking, changeOrigin: true, pathRewrite: { '^/api/tracking': '' } } as Options));
-app.use('/api/users', authenticateToken, createProxyMiddleware({ target: services.user, changeOrigin: true, pathRewrite: { '^/api/users': '' } } as Options));
-app.use('/api/notifications', authenticateToken, createProxyMiddleware({ target: services.notification, changeOrigin: true, pathRewrite: { '^/api/notifications': '' } } as Options));
-app.use('/api/depreciation', authenticateToken, createProxyMiddleware({ target: services.depreciation, changeOrigin: true, pathRewrite: { '^/api/depreciation': '' } } as Options));
-app.use('/api/purchasing', authenticateToken, createProxyMiddleware({ target: services.purchasing, changeOrigin: true, pathRewrite: { '^/api/purchasing': '' } } as Options));
+genericServices.forEach(service => {
+  app.use(service.path, authenticateToken, createProxyMiddleware({
+    target: service.target,
+    changeOrigin: true,
+    pathRewrite: { [`^${service.path}`]: '' },
+    onProxyReq: logProxyReq
+  } as Options));
+});
 
-// --- HEALTH CHECK ---
-app.get('/health', (req, res) => res.json({ 
-  status: 'Gateway AssetGuard Online', 
-  timestamp: new Date() 
-}));
-
-app.listen(PORT, () => console.log(`🚀 Gateway AssetGuard en http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  console.log(`🚀 Gateway AssetGuard en http://localhost:${PORT}`);
+  console.log(`🔑 Seguridad: Clave sincronizada -> ${SECRET_KEY}`);
+});
